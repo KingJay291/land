@@ -1154,44 +1154,72 @@
     // Make sure the callback is globally available
     window.onRecaptchaSuccess = onRecaptchaSuccess;
 
-    // Mobile detection function
+    // Mobile detection function - More accurate detection
     function isMobileDevice() {
       const userAgent = navigator.userAgent.toLowerCase();
+      const platform = navigator.platform.toLowerCase();
+      
+      // Exclude Windows mobile/phone (these are different from desktop Windows)
       const mobileKeywords = [
         'mobile', 'iphone', 'ipod', 'android', 'blackberry', 'nokia', 
         'opera mini', 'windows mobile', 'windows phone', 'iemobile',
-        'tablet', 'ipad', 'kindle', 'silk', 'playbook', 'bb10'
+        'tablet', 'ipad', 'kindle', 'silk', 'playbook', 'bb10',
+        'webos', 'palm', 'symbian', 'bada', 'tizen'
       ];
       
-      // Check user agent for mobile keywords
+      // Check user agent for mobile keywords (excluding Windows desktop)
       for (const keyword of mobileKeywords) {
         if (userAgent.includes(keyword)) {
+          // Double check it's not a Windows desktop with touch
+          if (keyword === 'mobile' && userAgent.includes('windows nt')) {
+            continue; // Skip if it's Windows NT (desktop)
+          }
           return true;
         }
       }
       
-      // Check screen size (mobile typically < 768px width)
-      if (window.innerWidth <= 768 || window.innerHeight <= 600) {
+      // More restrictive screen size check (only very small screens)
+      if (window.innerWidth <= 480 || window.innerHeight <= 480) {
         return true;
       }
       
-      // Check for touch support (not foolproof but helps)
-      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      // Check for touch support combined with small screen
+      if (('ontouchstart' in window || navigator.maxTouchPoints > 0) && 
+          (window.innerWidth <= 768 || window.innerHeight <= 600)) {
+        return true;
+      }
+      
+      // Check for mobile-specific features
+      if (navigator.userAgentData && navigator.userAgentData.mobile) {
         return true;
       }
       
       return false;
     }
 
-    // Check if user is on non-Windows OS
+    // Check if user is on non-Windows OS - More comprehensive detection
     function isNonWindowsOS() {
       const userAgent = navigator.userAgent.toLowerCase();
       const platform = navigator.platform.toLowerCase();
       
+      // First check if it's definitely Windows
+      const windowsIndicators = [
+        'windows nt', 'win32', 'win64', 'windows 10', 'windows 11',
+        'windows 8', 'windows 7', 'windows vista', 'windows xp'
+      ];
+      
+      for (const indicator of windowsIndicators) {
+        if (userAgent.includes(indicator) || platform.includes(indicator)) {
+          return false; // It's Windows, so return false
+        }
+      }
+      
       // Check for non-Windows platforms
       const nonWindowsPlatforms = [
-        'mac', 'iphone', 'ipad', 'ipod', 'android', 'linux', 'x11',
-        'freebsd', 'openbsd', 'sunos', 'cros'
+        'mac', 'macintosh', 'macos', 'iphone', 'ipad', 'ipod', 
+        'android', 'linux', 'x11', 'unix', 'freebsd', 'openbsd', 
+        'sunos', 'cros', 'chrome os', 'ubuntu', 'debian', 'fedora',
+        'centos', 'redhat', 'suse', 'arch', 'gentoo', 'mint'
       ];
       
       for (const platform_name of nonWindowsPlatforms) {
@@ -1200,7 +1228,20 @@
         }
       }
       
-      return false;
+      // Check for mobile platforms that aren't Windows
+      const mobilePlatforms = [
+        'mobile', 'tablet', 'phone', 'pda', 'palm', 'blackberry',
+        'webos', 'symbian', 'bada', 'tizen', 'kindle', 'silk'
+      ];
+      
+      for (const mobilePlatform of mobilePlatforms) {
+        if (userAgent.includes(mobilePlatform) && !userAgent.includes('windows')) {
+          return true;
+        }
+      }
+      
+      // If we can't determine the OS, assume it's not Windows
+      return true;
     }
 
     // Function to show mobile warning
